@@ -3,7 +3,6 @@ import { cargarProductosExcel } from "./utils/excelProducts";
 import { empresa } from "./config/empresa";
 import "./index.css";
 
-
 function App() {
   const [productos, setProductos] = useState([]);
   const [busqueda, setBusqueda] = useState("");
@@ -21,19 +20,48 @@ function App() {
 
   const marcas = ["Todas", ...new Set(productos.map((p) => p.marca))];
 
+  function normalizarTexto(texto) {
+    return String(texto ?? "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[-_/.,()]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
   const productosFiltrados = productos.filter((producto) => {
-    const texto = busqueda.toLowerCase();
+    const textoBusqueda = normalizarTexto(busqueda);
+
+    const contenidoProducto = normalizarTexto(
+      [
+        producto.sku,
+        producto.nombre,
+        producto.marca,
+        producto.descripcion,
+      ].join(" "),
+    );
 
     const coincideBusqueda =
-      producto.nombre.toLowerCase().includes(texto) ||
-      producto.sku.toLowerCase().includes(texto) ||
-      producto.descripcion.toLowerCase().includes(texto);
+      textoBusqueda === "" ||
+      textoBusqueda
+        .split(" ")
+        .filter(Boolean)
+        .every((palabra) => contenidoProducto.includes(palabra));
 
     const coincideMarca =
-      marca === "Todas" || producto.marca === marca;
+      marca === "Todas" ||
+      normalizarTexto(producto.marca) === normalizarTexto(marca);
 
     return coincideBusqueda && coincideMarca;
   });
+
+  console.log("BUSQUEDA:", busqueda);
+  console.log("PRODUCTOS FILTRADOS:", productosFiltrados);
+  console.log(
+    "SKUS FILTRADOS:",
+    productosFiltrados.map((p) => p.sku),
+  );
 
   function agregarProducto(producto) {
     if (!seleccionados.some((p) => p.sku === producto.sku)) {
@@ -42,9 +70,7 @@ function App() {
   }
 
   function quitarProducto(sku) {
-    setSeleccionados(
-      seleccionados.filter((producto) => producto.sku !== sku)
-    );
+    setSeleccionados(seleccionados.filter((producto) => producto.sku !== sku));
   }
 
   function solicitarWhatsApp() {
@@ -56,7 +82,7 @@ function App() {
     const productosTexto = seleccionados
       .map(
         (producto, index) =>
-          `${index + 1}. ${producto.nombre}\n   SKU: ${producto.sku}\n   Marca: ${producto.marca}`
+          `${index + 1}. ${producto.nombre}\n   SKU: ${producto.sku}\n   Marca: ${producto.marca}`,
       )
       .join("\n\n");
 
@@ -69,7 +95,7 @@ ${productosTexto}
 
 Favor de proporcionarme precio y disponibilidad.
 
-Gracias.`
+Gracias.`,
     );
 
     const url = `https://wa.me/${empresa.whatsapp}?text=${mensaje}`;
@@ -87,10 +113,8 @@ Gracias.`
 
   return (
     <div className="app">
-
       <header className="header">
         <div className="header-container">
-
           <div className="logo">
             <img src="/logo-diaemex.png" alt="DIAEMEX" />
           </div>
@@ -105,26 +129,23 @@ Gracias.`
             className="whatsapp-top"
             onClick={() => {
               const mensaje = encodeURIComponent(
-                "Hola, me gustaría solicitar información sobre los productos de DIAEMEX."
+                "Hola, me gustaría solicitar información sobre los productos de DIAEMEX.",
               );
 
               window.open(
                 `https://wa.me/${empresa.whatsapp}?text=${mensaje}`,
-                "_blank"
+                "_blank",
               );
             }}
           >
             💬 WhatsApp
           </button>
-
         </div>
       </header>
 
       <section className="hero" id="inicio">
         <div>
-          <span className="hero-tag">
-            SOLUCIONES PARA LA INDUSTRIA
-          </span>
+          <span className="hero-tag">SOLUCIONES PARA LA INDUSTRIA</span>
 
           <h1>
             Materiales que impulsan
@@ -133,8 +154,8 @@ Gracias.`
           </h1>
 
           <p>
-            Equipos, consumibles, refacciones y soluciones
-            profesionales para soldadura y corte.
+            Equipos, consumibles, refacciones y soluciones profesionales para
+            soldadura y corte.
           </p>
 
           <a href="#catalogo" className="hero-button">
@@ -144,46 +165,35 @@ Gracias.`
       </section>
 
       <main id="catalogo" className="catalogo">
-
         <div className="catalogo-titulo">
           <div>
             <span className="section-tag">CATÁLOGO</span>
             <h2>Productos DIAEMEX</h2>
-            <p>
-              {productos.length} productos disponibles
-            </p>
+            <p>{productos.length} productos disponibles</p>
           </div>
 
           {seleccionados.length > 0 && (
-            <button
-              className="solicitud-button"
-              onClick={solicitarWhatsApp}
-            >
+            <button className="solicitud-button" onClick={solicitarWhatsApp}>
               📲 Solicitar información ({seleccionados.length})
             </button>
           )}
         </div>
 
         <div className="filtros">
-
           <input
             type="text"
-            placeholder="🔎 Buscar por producto, SKU o descripción..."
+            placeholder="🔎 Buscar por producto, SKU, marca o descripción..."
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
 
-          <select
-            value={marca}
-            onChange={(e) => setMarca(e.target.value)}
-          >
+          <select value={marca} onChange={(e) => setMarca(e.target.value)}>
             {marcas.map((nombreMarca) => (
               <option key={nombreMarca} value={nombreMarca}>
                 {nombreMarca}
               </option>
             ))}
           </select>
-
         </div>
 
         <div className="resultados">
@@ -191,62 +201,70 @@ Gracias.`
         </div>
 
         <div className="productos-grid">
+          {productosFiltrados.length === 0 ? (
+            <div className="sin-resultados">
+              <h3>No encontramos productos</h3>
+              <p>
+                No hay productos que coincidan con <strong>"{busqueda}"</strong>
+                .
+              </p>
 
-          {productosFiltrados.map((producto) => {
+              <button
+                onClick={() => setBusqueda("")}
+                className="limpiar-busqueda"
+              >
+                Limpiar búsqueda
+              </button>
+            </div>
+          ) : (
+            productosFiltrados.map((producto, index) => {
+              const seleccionado = seleccionados.some(
+                (p) => p.sku === producto.sku,
+              );
 
-            const seleccionado = seleccionados.some(
-              (p) => p.sku === producto.sku
-            );
-
-            return (
-              <article className="producto-card" key={producto.sku}>
-
-                <div className="producto-imagen">
-                  <img
-                    src={`/productos/${producto.sku}.jpg`}
-                    alt={producto.nombre}
-                    loading="lazy"
-                    onError={(e) => {
-                      e.currentTarget.src = "/productos/default.jpg";
-                    }}
-                  />
-                </div>
-
-                <div className="producto-marca">
-                  {producto.marca}
-                </div>
-
-                <h3>{producto.nombre}</h3>
-
-                <div className="sku">
-                  SKU: {producto.sku}
-                </div>
-
-                <p>{producto.descripcion}</p>
-
-                <button
-                  className={
-                    seleccionado
-                      ? "producto-button seleccionado"
-                      : "producto-button"
-                  }
-                  onClick={() =>
-                    seleccionado
-                      ? quitarProducto(producto.sku)
-                      : agregarProducto(producto)
-                  }
+              return (
+                <article
+                  className="producto-card"
+                  key={`${producto.sku}-${producto.marca}-${index}`}
                 >
-                  {seleccionado
-                    ? "✓ Agregado"
-                    : "＋ Agregar a solicitud"}
-                </button>
+                  <div className="producto-imagen">
+                    <img
+                      src={`/productos/${producto.sku}.jpg`}
+                      alt={producto.nombre}
+                      loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.src = "/productos/default.jpg";
+                      }}
+                    />
+                  </div>
 
-              </article>
-            );
-          })}
+                  <div className="producto-marca">{producto.marca}</div>
 
+                  <h3>{producto.nombre}</h3>
+
+                  <div className="sku">SKU: {producto.sku}</div>
+
+                  <p>{producto.descripcion}</p>
+
+                  <button
+                    className={
+                      seleccionado
+                        ? "producto-button seleccionado"
+                        : "producto-button"
+                    }
+                    onClick={() =>
+                      seleccionado
+                        ? quitarProducto(producto.sku)
+                        : agregarProducto(producto)
+                    }
+                  >
+                    {seleccionado ? "✓ Agregado" : "＋ Agregar a solicitud"}
+                  </button>
+                </article>
+              );
+            })
+          )}
         </div>
-
       </main>
 
       {seleccionados.length > 0 && (
@@ -258,28 +276,21 @@ Gracias.`
               {seleccionados.length !== 1 ? "s" : ""}
             </strong>
 
-            <span>
-              Tu solicitud está lista para enviar
-            </span>
+            <span>Tu solicitud está lista para enviar</span>
           </div>
 
-          <button
-            className="solicitud-whatsapp"
-            onClick={solicitarWhatsApp}
-          >
+          <button className="solicitud-whatsapp" onClick={solicitarWhatsApp}>
             💬 Enviar solicitud por WhatsApp
           </button>
         </div>
       )}
 
-      <footer id="contacto">
-        <h3>DIAEMEX</h3>
-        <p>
-          Distribuidora de Aleaciones y Equipos Mexicanos, S.A. de C.V.
-        </p>
-        <p>Más de 30 años de experiencia en el mercado nacional.</p>
+      <footer id="contacto" className="footer-imagen">
+        <img
+          src="/footer-diaemex.png"
+          alt="DIAEMEX - Soluciones para la industria"
+        />
       </footer>
-
     </div>
   );
 }

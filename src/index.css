@@ -379,3 +379,15 @@ footer p {
     width: 100%;
   }
 }
+
+.footer-imagen {
+  width: 100%;
+  background: #07111c;
+  overflow: hidden;
+}
+
+.footer-imagen img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
