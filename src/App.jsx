@@ -10,6 +10,55 @@ function App() {
   const [seleccionados, setSeleccionados] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [eventoInstalacion, setEventoInstalacion] = useState(null);
+  const [esIOS, setEsIOS] = useState(false);
+  const [appInstalada, setAppInstalada] = useState(false);
+
+  useEffect(() => {
+    const ios =
+      /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" &&
+        navigator.maxTouchPoints > 1);
+
+    const instalada =
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.navigator.standalone === true;
+
+    setEsIOS(ios);
+    setAppInstalada(instalada);
+
+    const capturarInstalacion = (evento) => {
+      evento.preventDefault();
+      setEventoInstalacion(evento);
+    };
+
+    const instalacionCompletada = () => {
+      setAppInstalada(true);
+      setEventoInstalacion(null);
+    };
+
+    window.addEventListener(
+      "beforeinstallprompt",
+      capturarInstalacion
+    );
+
+    window.addEventListener(
+      "appinstalled",
+      instalacionCompletada
+    );
+
+    return () => {
+      window.removeEventListener(
+        "beforeinstallprompt",
+        capturarInstalacion
+      );
+
+      window.removeEventListener(
+        "appinstalled",
+        instalacionCompletada
+      );
+    };
+  }, []);
 
   useEffect(() => {
     cargarProductosExcel()
@@ -103,6 +152,34 @@ Gracias.`,
     window.open(url, "_blank");
   }
 
+  async function instalarAplicacion() {
+    if (eventoInstalacion) {
+      eventoInstalacion.prompt();
+
+      await eventoInstalacion.userChoice;
+
+      setEventoInstalacion(null);
+      return;
+    }
+
+    if (esIOS) {
+      alert(
+        'Para instalar DIAEMEX en tu iPhone:\n\n' +
+        '1. Abre esta página en Safari.\n' +
+        '2. Pulsa el botón Compartir.\n' +
+        '3. Selecciona "Añadir a pantalla de inicio".\n' +
+        '4. Pulsa "Añadir".'
+      );
+      return;
+    }
+
+    alert(
+      'Para instalar DIAEMEX:\n\n' +
+      'Abre el menú ⋮ de Chrome y selecciona ' +
+      '"Instalar aplicación" o "Añadir a pantalla principal".'
+    );
+  }
+
   if (cargando) {
     return <div className="loading">Cargando catálogo DIAEMEX...</div>;
   }
@@ -124,6 +201,16 @@ Gracias.`,
             <a href="#catalogo">Catálogo</a>
             <a href="#contacto">Contacto</a>
           </nav>
+
+          {!appInstalada && (
+            <button
+              className="install-top"
+              onClick={instalarAplicacion}
+              type="button"
+            >
+              📲 Instalar DIAEMEX
+            </button>
+          )}
 
           <button
             className="whatsapp-top"
