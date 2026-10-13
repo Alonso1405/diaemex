@@ -1,49 +1,63 @@
+
 import * as XLSX from "xlsx";
 
+function obtenerValor(fila, columna) {
+    const clave = Object.keys(fila).find(
+        (k) => k.trim().toUpperCase() === columna.toUpperCase()
+    );
+
+    return clave ? fila[clave] : "";
+}
+
 export async function cargarProductosExcel() {
-    try {
-        const respuesta = await fetch("/catalogo.xlsx");
+    const respuesta = await fetch("/catalogo.xlsx");
 
-        if (!respuesta.ok) {
-            throw new Error(
-                `No se pudo cargar catalogo.xlsx. Código: ${respuesta.status}`
-            );
-        }
-
-        const datos = await respuesta.arrayBuffer();
-
-        const libro = XLSX.read(datos, {
-            type: "array",
-        });
-
-        const productos = [];
-
-        libro.SheetNames.forEach((nombreHoja) => {
-            const hoja = libro.Sheets[nombreHoja];
-
-            if (!hoja) return;
-
-            const filas = XLSX.utils.sheet_to_json(hoja, {
-                defval: "",
-            });
-
-            filas.forEach((fila) => {
-                productos.push({
-                    sku: String(fila.SKU ?? "").trim(),
-                    nombre: String(fila.NOMBRE ?? "").trim(),
-                    marca: String(fila.MARCA ?? nombreHoja ?? "").trim(),
-                    descripcion: String(fila.DESCRIPCION ?? "").trim(),
-                    precio: fila.PRECIO ?? "",
-                });
-            });
-        });
-
-        console.log("Catálogo cargado correctamente:", productos.length);
-        console.log("Hojas encontradas:", libro.SheetNames);
-
-        return productos;
-    } catch (error) {
-        console.error("Error al leer el catálogo:", error);
-        throw error;
+    if (!respuesta.ok) {
+        throw new Error("No se encontró public/catalogo.xlsx");
     }
+
+    const datos = await respuesta.arrayBuffer();
+    const libro = XLSX.read(datos, {
+        type: "array",
+    });
+
+    const productos = [];
+
+    libro.SheetNames.forEach((nombreHoja) => {
+        const hoja = libro.Sheets[nombreHoja];
+        if (!hoja) return;
+
+        const filas = XLSX.utils.sheet_to_json(hoja, {
+            defval: "",
+            raw: false,
+        });
+
+        filas.forEach((fila) => {
+            const sku = String(obtenerValor(fila, "SKU") ?? "").trim();
+            const nombreExcel = String(
+                obtenerValor(fila, "NOMBRE") ?? ""
+            ).trim();
+
+            const descripcionExcel = String(
+                obtenerValor(fila, "DESCRIPCION") ?? ""
+            ).trim();
+
+            // Algunas hojas tienen NOMBRE y otras usan DESCRIPCION.
+            const nombre = nombreExcel || descripcionExcel;
+
+            if (!sku || !nombre) return;
+
+            productos.push({
+                sku,
+                nombre,
+                marca:
+                    String(obtenerValor(fila, "MARCA") ?? "").trim() ||
+                    nombreHoja,
+                descripcion: nombreExcel ? descripcionExcel : "",
+                precio: obtenerValor(fila, "PRECIO") || null,
+            });
+        });
+    });
+
+    return productos;
 }
