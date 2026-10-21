@@ -7,6 +7,7 @@ function App() {
   const [productos, setProductos] = useState([]);
   const [busqueda, setBusqueda] = useState("");
   const [marca, setMarca] = useState("Todas");
+  const [categoria, setCategoria] = useState("Todas");
   const [seleccionados, setSeleccionados] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -17,8 +18,7 @@ function App() {
   useEffect(() => {
     const ios =
       /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-      (navigator.platform === "MacIntel" &&
-        navigator.maxTouchPoints > 1);
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
     const instalada =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -37,26 +37,14 @@ function App() {
       setEventoInstalacion(null);
     };
 
-    window.addEventListener(
-      "beforeinstallprompt",
-      capturarInstalacion
-    );
+    window.addEventListener("beforeinstallprompt", capturarInstalacion);
 
-    window.addEventListener(
-      "appinstalled",
-      instalacionCompletada
-    );
+    window.addEventListener("appinstalled", instalacionCompletada);
 
     return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        capturarInstalacion
-      );
+      window.removeEventListener("beforeinstallprompt", capturarInstalacion);
 
-      window.removeEventListener(
-        "appinstalled",
-        instalacionCompletada
-      );
+      window.removeEventListener("appinstalled", instalacionCompletada);
     };
   }, []);
 
@@ -67,7 +55,21 @@ function App() {
       .finally(() => setCargando(false));
   }, []);
 
-  const marcas = ["Todas", ...new Set(productos.map((p) => p.marca))];
+  const marcas = [
+    "Todas",
+    ...new Set(productos.map((p) => p.marca).filter(Boolean)),
+  ].sort((a, b) =>
+    a === "Todas" ? -1 : b === "Todas" ? 1 : a.localeCompare(b, "es"),
+  );
+
+  const categorias = [
+    "Todas",
+    ...new Set(
+      productos.map((p) => p.categoria || "Por revisar").filter(Boolean),
+    ),
+  ].sort((a, b) =>
+    a === "Todas" ? -1 : b === "Todas" ? 1 : a.localeCompare(b, "es"),
+  );
 
   function normalizarTexto(texto) {
     return String(texto ?? "")
@@ -88,6 +90,7 @@ function App() {
         producto.nombre,
         producto.marca,
         producto.descripcion,
+        producto.categoria,
       ].join(" "),
     );
 
@@ -102,7 +105,12 @@ function App() {
       marca === "Todas" ||
       normalizarTexto(producto.marca) === normalizarTexto(marca);
 
-    return coincideBusqueda && coincideMarca;
+    const coincideCategoria =
+      categoria === "Todas" ||
+      normalizarTexto(producto.categoria || "Por revisar") ===
+        normalizarTexto(categoria);
+
+    return coincideBusqueda && coincideMarca && coincideCategoria;
   });
 
   console.log("BUSQUEDA:", busqueda);
@@ -164,19 +172,19 @@ Gracias.`,
 
     if (esIOS) {
       alert(
-        'Para instalar DIAEMEX en tu iPhone:\n\n' +
-        '1. Abre esta página en Safari.\n' +
-        '2. Pulsa el botón Compartir.\n' +
-        '3. Selecciona "Añadir a pantalla de inicio".\n' +
-        '4. Pulsa "Añadir".'
+        "Para instalar DIAEMEX en tu iPhone:\n\n" +
+          "1. Abre esta página en Safari.\n" +
+          "2. Pulsa el botón Compartir.\n" +
+          '3. Selecciona "Añadir a pantalla de inicio".\n' +
+          '4. Pulsa "Añadir".',
       );
       return;
     }
 
     alert(
-      'Para instalar DIAEMEX:\n\n' +
-      'Abre el menú ⋮ de Chrome y selecciona ' +
-      '"Instalar aplicación" o "Añadir a pantalla principal".'
+      "Para instalar DIAEMEX:\n\n" +
+        "Abre el menú ⋮ de Chrome y selecciona " +
+        '"Instalar aplicación" o "Añadir a pantalla principal".',
     );
   }
 
@@ -274,10 +282,28 @@ Gracias.`,
             onChange={(e) => setBusqueda(e.target.value)}
           />
 
-          <select value={marca} onChange={(e) => setMarca(e.target.value)}>
+          <select
+            aria-label="Filtrar por marca"
+            value={marca}
+            onChange={(e) => setMarca(e.target.value)}
+          >
             {marcas.map((nombreMarca) => (
               <option key={nombreMarca} value={nombreMarca}>
                 {nombreMarca}
+              </option>
+            ))}
+          </select>
+
+          <select
+            aria-label="Filtrar por categoría"
+            value={categoria}
+            onChange={(e) => setCategoria(e.target.value)}
+          >
+            {categorias.map((nombreCategoria) => (
+              <option key={nombreCategoria} value={nombreCategoria}>
+                {nombreCategoria === "Todas"
+                  ? "Todas las categorías"
+                  : nombreCategoria}
               </option>
             ))}
           </select>
@@ -326,6 +352,11 @@ Gracias.`,
                   </div>
 
                   <div className="producto-marca">{producto.marca}</div>
+                  {producto.categoria && (
+                    <div className="producto-categoria">
+                      {producto.categoria}
+                    </div>
+                  )}
 
                   <h3>{producto.nombre}</h3>
 
