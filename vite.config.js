@@ -8,11 +8,9 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
 
-      // Evita que la navegación de la PWA devuelva index.html
-      // cuando se solicita directamente un archivo estático.
       workbox: {
         navigateFallbackDenylist: [
-          /\/.*\.(?:png|jpe?g|gif|svg|webp|ico|xlsx|pdf|woff2?)$/i,
+          /\.(?:png|jpg|jpeg|webp|gif|svg|ico|xlsx|pdf)$/i,
         ],
       },
 
